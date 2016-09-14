@@ -54,7 +54,7 @@ handle = function (redirect, result) {
     }
 
     if (typeof to === 'function') {
-        to = to.call(redirect, result);
+        to = to.call(this, result, redirect);
     }
     else if (isRegExp(from) && /\$\d/.test(to)) {
         to = to.replace(from, to);

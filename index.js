@@ -1,41 +1,42 @@
 'use strict';
 
-var redirect, isRegExp, match, handle;
-
-redirect = function (redirects) {
-    return function* redirect (next) {
-        if (!redirects.some(match, this)) {
-            yield next;
+const redirect = function (redirects) {
+    return async function redirect (context, next) {
+        const redirected = redirects.some(function (redirect) {
+            return match(context, redirect);
+        });
+        if (!redirected) {
+            yield next();
         }
     };
 };
 
-isRegExp = function (object) {
+const isRegExp = function (object) {
     return Object.prototype.toString.call(object) === '[object RegExp]';
 };
 
-match = function (redirect) {
-    var from = redirect.from;
-    var path = this.path;
-    var result;
+const match = function (context, redirect) {
+    const from = redirect.from;
+    const path = context.path;
+    let result;
 
     switch (typeof from) {
         case 'string':
             if (path === from) {
-                return handle.call(this, redirect);
+                return handle(context, redirect);
             }
             break;
         case 'function':
-            result = from.call(this, path, redirect);
+            result = from(context, path, redirect);
             if (result) {
-                return handle.call(this, redirect, result);
+                return handle(context, redirect, result);
             }
             break;
         case 'object':
             if (isRegExp(from)) {
                 result = path.match(from);
                 if (result != null) {
-                    return handle.call(this, redirect, result);
+                    return handle(context, redirect, result);
                 }
             }
             break;
@@ -44,27 +45,28 @@ match = function (redirect) {
     }
 };
 
-handle = function (redirect, result) {
-    var from   = redirect.from;
-    var to     = redirect.to;
-    var status = redirect.status;
+const handle = function (context, redirect, result) {
+    const from   = redirect.from;
+    const status = redirect.status;
 
+    let to = redirect.to;
     if (to == null) {
         to = result;
     }
 
     if (typeof to === 'function') {
-        to = to.call(this, result, redirect);
+        to = to(context, result, redirect);
     }
     else if (isRegExp(from) && /\$\d/.test(to)) {
         to = to.replace(from, to);
     }
 
     if (status != null) {
-        this.status = status;
+        context.status = status;
     }
 
-    this.redirect(to);
+    context.redirect(to);
+
     return true;
 };
 

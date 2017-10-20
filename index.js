@@ -6,7 +6,7 @@ const redirect = function (redirects) {
             return match(context, redirect);
         });
         if (!redirected) {
-            yield next();
+            await next();
         }
     };
 };
